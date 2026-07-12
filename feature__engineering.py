@@ -1,4 +1,5 @@
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 
 df = pd.read_csv("cleaned_data.csv")
 
@@ -38,3 +39,17 @@ def get_severity_level(score):
 df["severity_level"] = df["severity_score"].apply(get_severity_level)
 print("\n--- จำนวนอุบัติเหตุแต่ละความรุนแรง ----")
 print(df["severity_level"].value_counts())
+
+feature_columns = ["hour", "month", "time_period", "day_of_week", "weather", "cause_grouped",
+                   "road_shape", "terrain", "first_vehicle"]
+
+df_model = df[feature_columns + ["severity_level"]].copy()
+
+label_encoders = {}
+for col in ["time_period", "day_of_week", "weather", "cause_grouped", "road_shape", "terrain", "first_vehicle"]:
+    le = LabelEncoder()
+    df_model[col] = le.fit_transform(df_model[col])
+    label_encoders[col] = le
+
+print(df_model.head())
+print("\nขนาดข้อมูลพร้มอใช้:", df_model.shape)
