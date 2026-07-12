@@ -10,6 +10,7 @@ df["month"] = df["time"].dt.month
 
 print(df[["time", "hour", "day_of_week", "month"]].head(10))
 
+#check accident defferent time
 def get_time_period(hour):
     if 5 <= hour < 12:
         return "เช้า"
@@ -23,3 +24,17 @@ def get_time_period(hour):
 df["time_period"] = df["hour"].apply(get_time_period)
 print("\n--- จำนวนอุบัติเหตุแต่ละชาวงเวลา ---")
 print(df["time_period"].value_counts()) 
+
+df["severity_score"] = df["fatalities"] * 3 + df["injuries"] * 1
+
+def get_severity_level(score):
+    if score == 0:
+        return "ต่ำ"
+    elif score <= 2:
+        return "กลาง"
+    else:
+        return "สูง"
+
+df["severity_level"] = df["severity_score"].apply(get_severity_level)
+print("\n--- จำนวนอุบัติเหตุแต่ละความรุนแรง ----")
+print(df["severity_level"].value_counts())
