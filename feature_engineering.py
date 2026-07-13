@@ -3,6 +3,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
+from sklearn.inspection import permutation_importance
 import matplotlib.pyplot as plt
 
 df = pd.read_csv("cleaned_data.csv")
@@ -91,3 +92,13 @@ plt.gca().invert_yaxis()
 plt.tight_layout()
 plt.savefig("feature_importance.png")
 print("\nบันทึกกราฟ feature_importance.png")
+
+result = permutation_importance(model, X_test, y_test, n_repeats=5, random_state=42, n_jobs=-1)
+
+perm_df = pd.DataFrame({
+    "feature": feature_columns,
+    "importance": result.importances_mean
+}).sort_values("importance", ascending=False)
+
+print("\n--- permutation importance (แม่นยำกว่า)---")
+print(perm_df)
