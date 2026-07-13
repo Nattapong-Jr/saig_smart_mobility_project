@@ -3,6 +3,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
+import matplotlib.pyplot as plt
 
 df = pd.read_csv("cleaned_data.csv")
 
@@ -71,3 +72,22 @@ print("\n--- ผมทดสอบโมเดล ----")
 print("Accuracy: ", accuracy_score(y_test, y_perd))
 print("\nรายละเอียดเพิ่มเติม: ")
 print(classification_report(y_test, y_perd))
+
+importances = model.feature_importances_
+feature_names = X.columns
+importance_df = pd.DataFrame({
+    "feature": feature_names,
+    "importance": importances
+}).sort_values("importance", ascending=False)
+
+print("\n--- Feature Importance ---")
+print(importance_df)
+
+plt.figure(figsize=(10, 6))
+plt.barh(importance_df["feature"], importance_df["importance"])
+plt.xlabel("Importance")
+plt.title("Feature Importance - Accident Severity Model")
+plt.gca().invert_yaxis()
+plt.tight_layout()
+plt.savefig("feature_importance.png")
+print("\nบันทึกกราฟ feature_importance.png")
