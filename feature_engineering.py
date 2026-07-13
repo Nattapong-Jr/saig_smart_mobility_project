@@ -102,3 +102,17 @@ perm_df = pd.DataFrame({
 
 print("\n--- permutation importance (แม่นยำกว่า)---")
 print(perm_df)
+
+feature_columns_v2 = ["first_vehicle", "cause_grouped", "month", "day_of_week",
+                      "weather", "road_shape", "terrain"]
+X_v2 = df_model[feature_columns_v2]
+X_train2, X_test2, y_train2, y_test2 = train_test_split(X_v2, y, test_size=0.2, random_state=42)
+
+model_v2 = RandomForestClassifier(n_estimators=100, random_state=42)
+model_v2.fit(X_train2, y_train2)
+
+y_perd2 = model_v2.predict(X_test2)
+
+print("\n--- ผลการทดสอบโฒเดล v2 (ตัด feature ที่ไม่มีผล) ---")
+print("Accuracy:", accuracy_score(y_test2, y_perd2))
+print(classification_report(y_test2, y_perd2))
