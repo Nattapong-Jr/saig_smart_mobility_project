@@ -4,7 +4,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.inspection import permutation_importance
+from sklearn.metrics import recall_score
 import matplotlib.pyplot as plt
+import numpy as np
 
 df = pd.read_csv("cleaned_data.csv")
 
@@ -116,3 +118,45 @@ y_perd2 = model_v2.predict(X_test2)
 print("\n--- ผลการทดสอบโฒเดล v2 (ตัด feature ที่ไม่มีผล) ---")
 print("Accuracy:", accuracy_score(y_test2, y_perd2))
 print(classification_report(y_test2, y_perd2))
+
+day_order = {"Monday": 0, "Tuesday":1, "Wednesday":2, "Thursday": 3,
+             "Friday": 4, "Saturday": 5, "Sunday": 6}
+df_model["day_num"] = df["day_of_week"].map(day_order)
+
+df_model["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
+df_model["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
+
+df_model["day_sin"] = np.sin(2 * np.pi * df_model["day_num"] / 7)
+df_model["day_cos"] = np.cos(2 * np.pi * df_model["day_num"] / 7)
+
+df_model["month_sin"] = np.sin(2 * np.pi * df["month"] / 12)
+df_model["month_cos"] = np.cos(2 * np.pi * df["month"] / 12)
+
+print(df_model[["hour_sin", "hour_cos", "day_sin", "day_cos", "month_sin", "month_cos"]].head())
+
+feature_columns_cyclic = ["first_vehicle", "cause_grouped", "weather", "road_shape", "terrain",
+                          "hour_sin", "hour_cos", "day_sin", "day_cos", "month_sin", "month_cos"]
+
+X_cyclic = df_model[feature_columns_cyclic]
+X_train3, X_test3, y_train3, y_test3 = train_test_split(X_cyclic, y, test_size=0.2, random_state=42)
+
+model_v4 = RandomForestClassifier(n_estimators=100, random_state=42)
+model_v4.fit(X_train3, y_train3)
+
+y_pred4 = model_v4.predict(X_test3)
+
+print("\n--- โมเดล v4 (cyclic ending) ---")
+print("Accuracy:", accuracy_score(y_test3, y_pred4))
+print(classification_report(y_test3, y_pred4))
+
+recall_high = recall_score(y_test3, y_pred4, labels=["สูง"], average="micro")
+print("Recall เฉพาะกลุ่ม 'สูง':", recall_high)
+
+model_v5 = RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced")
+model_v5.fit(X_train3, y_train3)
+
+y_pred5 = model_v5.predict(X_test3)
+
+print("\n--- โมเดล v5 (cyclic + class_weight=balanced) ---")
+print("Accuracy:", accuracy_score(y_test3, y_pred5))
+print(classification_report(y_test3, y_pred5))
