@@ -7,6 +7,7 @@ from sklearn.inspection import permutation_importance
 from sklearn.metrics import recall_score
 import matplotlib.pyplot as plt
 import numpy as np
+import joblib
 
 df = pd.read_csv("cleaned_data.csv")
 
@@ -152,7 +153,7 @@ print(classification_report(y_test3, y_pred4))
 recall_high = recall_score(y_test3, y_pred4, labels=["สูง"], average="micro")
 print("Recall เฉพาะกลุ่ม 'สูง':", recall_high)
 
-model_v5 = RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced")
+model_v5 = RandomForestClassifier(n_estimators=100,max_depth=14, random_state=42, class_weight="balanced")
 model_v5.fit(X_train3, y_train3)
 
 y_pred5 = model_v5.predict(X_test3)
@@ -160,3 +161,8 @@ y_pred5 = model_v5.predict(X_test3)
 print("\n--- โมเดล v5 (cyclic + class_weight=balanced) ---")
 print("Accuracy:", accuracy_score(y_test3, y_pred5))
 print(classification_report(y_test3, y_pred5))
+
+joblib.dump(model_v5, "accident_severity_model.pkl")
+joblib.dump(label_encoders, "label_encoders.pkl")
+
+print("\nบันทึกโมเดลไว้ที่ accident_severity_model.pkl")
