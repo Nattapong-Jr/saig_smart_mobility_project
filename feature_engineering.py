@@ -162,6 +162,9 @@ print("\n--- โมเดล v5 (cyclic + class_weight=balanced) ---")
 print("Accuracy:", accuracy_score(y_test3, y_pred5))
 print(classification_report(y_test3, y_pred5))
 
+df.to_csv("data_with_feature.csv", index=False)
+print("\nเซฟไฟล์ data_with_feature.csv เรียบร้อย")
+
 joblib.dump(model_v5, "accident_severity_model.pkl")
 joblib.dump(label_encoders, "label_encoders.pkl")
 
