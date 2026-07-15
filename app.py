@@ -43,3 +43,26 @@ heat_data = df_sample[["latitude", "longitude"]].values.tolist()
 HeatMap(heat_data, radius=8, blur=10).add_to(m)
 
 st_folium(m, width=1200, height=600)
+
+st.header("ทำนายระดับความเสี่ยงอุบัติเหตุ")
+
+st.warning(
+    "⚠️ **ข้อควรรู้:** โมเดลนี้มีความแม่นยำโดยรวมประมาณ 51% และถูกออกแบบให้ "
+    "**เน้นจับกรณีอุบัติเหตุรุนแรง (recall สูง)** เพื่อความปลอดภัย ผลลัพธ์จึงอาจ "
+    "'เตือนเกินจำเป็น' ได้บ่อยกว่าปกติ ควรใช้เป็นข้อมูลประกอบการตัดสินใจเท่านั้น "
+    "ไม่ใช่คำทำนายที่แม่นยำสมบูรณ์"
+)
+
+col1, col2, = st.columns(2)
+
+with col1:
+    input_venicle = st.selectbox("ประเภทยานพาหนะ", df["first_vehicle"].unique())
+    input_cause = st.selectbox("สาเหตุ (คาดการณ์)", df["cause_grouped"].unique())
+    input_weather = st.selectbox("สภาพอากาศ", df["weather"].unique())
+
+with col2:
+    input_road_shape = st.selectbox("ลักษณะถนน", df["road_shape"].unique())
+    input_terrain = st.selectbox("ภูมิประเทศ", df["terrain"].unique())
+
+if st.button("ทำนายความเสี่ยง", type="primary"):
+    st.write("กำลังพัฒนาส่วนทำนายในขั้นตอนถัดไป...")
