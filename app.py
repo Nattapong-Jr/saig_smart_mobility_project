@@ -3,6 +3,7 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import HeatMap
+import joblib
 
 st.set_page_config(page_title="Smart Mobility - จุดเสี่ยงอุบัติเหตุ", layout="wide")
 
@@ -10,6 +11,9 @@ st.title("Smart Mobility: แผนที่จุดเสี่ยงอุบ
 st.write("วิเคราะห์จากข้อมูลอุบัติเหตุจริงทั่วประเทศไทย")
 
 df = pd.read_csv("data_with_feature.csv")
+
+model = joblib.load("accident_severity_model.pkl")
+label_encoders = joblib.load("label_encoders.pkl")
 
 st.write(f"ข้อมูลทั้งหมด: {len(df):,} เหตุการณ์")
 st.dataframe(df.head())
@@ -56,7 +60,7 @@ st.warning(
 col1, col2, = st.columns(2)
 
 with col1:
-    input_venicle = st.selectbox("ประเภทยานพาหนะ", df["first_vehicle"].unique())
+    input_vehicle = st.selectbox("ประเภทยานพาหนะ", df["first_vehicle"].unique())
     input_cause = st.selectbox("สาเหตุ (คาดการณ์)", df["cause_grouped"].unique())
     input_weather = st.selectbox("สภาพอากาศ", df["weather"].unique())
 
@@ -65,4 +69,33 @@ with col2:
     input_terrain = st.selectbox("ภูมิประเทศ", df["terrain"].unique())
 
 if st.button("ทำนายความเสี่ยง", type="primary"):
-    st.write("กำลังพัฒนาส่วนทำนายในขั้นตอนถัดไป...")
+    encoded_vehicle = label_encoders["first_vehicle"].transform([input_vehicle])[0]
+    encoded_cause = label_encoders["cause_grouped"].transform([input_cause])[0]
+    encoded_weather = label_encoders["weather"].transform([input_weather])[0]
+    encoded_road_shape = label_encoders["road_shape"].transform([input_road_shape])[0]
+    encoded_terrain = label_encoders["terrain"].transform([input_terrain])[0]
+
+    input_data = pd.DataFrame([{
+        "first_vehicle": encoded_vehicle,
+        "cause_grouped": encoded_cause,
+        "weather": encoded_weather,
+        "road_shape": encoded_road_shape,
+        "terrain": encoded_terrain,
+        "hour_sin": 0, "hour_cos": 1,
+        "day_sin": 0, "day_cos": 1,
+        "month_sin": 0, "month_cos": 1,
+    }])
+
+    prediction = model.predict(input_data)[0]
+    probabilities = model.predict_proba(input_data)[0]
+    confidence = max(probabilities) * 100
+
+    st.subheader(f"ผลการทำนายซ ระดับความเสี่ยง **{prediction}**")
+    st.write(f"ความมั่นใจของโมเดล: **{confidence:.1f}%**")
+
+    if prediction == "สูง":
+        st.error("⚠️ เงื่อนไขนี้มีความเสี่ยงสูงที่จะเกิดอุบัติเหตุรุนแรง โปรดขับขี่ด้วยความระมัดระวังเป็นพิเศษ")
+    elif prediction == "กลาง":
+        st.warning("เงื่อนไขนี้มีความเสี่ยงระดับปานกลาง โปรดขับขี่ด้วยความระมัดระวัง")
+    else:
+        st.success("เงื่อนไขนี้มีความเสี่ยงค่อนข้างต่ำ แต่ยังต้องขับขี่อย่างระมัดระวังเสมอ")
