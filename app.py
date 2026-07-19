@@ -4,6 +4,7 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import HeatMap
 import joblib
+import numpy as np
 
 st.set_page_config(page_title="Smart Mobility - จุดเสี่ยงอุบัติเหตุ", layout="wide")
 
@@ -67,6 +68,10 @@ with col1:
 with col2:
     input_road_shape = st.selectbox("ลักษณะถนน", df["road_shape"].unique())
     input_terrain = st.selectbox("ภูมิประเทศ", df["terrain"].unique())
+    input_hour = st.slider("ชั่วโมง (0-23 น.)", 0, 23, 12)
+    input_day = st.selectbox(" วันในสัปดาห์", ["Monday", "Tuesday", "Wednesday", "Thursday",
+                                               "Friday", "Saturday", "Sunday",])
+    input_month = st.selectbox("เดือน", list(range(1, 13)))
 
 if st.button("ทำนายความเสี่ยง", type="primary"):
     encoded_vehicle = label_encoders["first_vehicle"].transform([input_vehicle])[0]
@@ -75,22 +80,29 @@ if st.button("ทำนายความเสี่ยง", type="primary"):
     encoded_road_shape = label_encoders["road_shape"].transform([input_road_shape])[0]
     encoded_terrain = label_encoders["terrain"].transform([input_terrain])[0]
 
+    day_order = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
+                 "Friday": 4, "Saturday": 5, "Sunday": 6}
+    day_num = day_order[input_day]
+
     input_data = pd.DataFrame([{
         "first_vehicle": encoded_vehicle,
         "cause_grouped": encoded_cause,
         "weather": encoded_weather,
         "road_shape": encoded_road_shape,
         "terrain": encoded_terrain,
-        "hour_sin": 0, "hour_cos": 1,
-        "day_sin": 0, "day_cos": 1,
-        "month_sin": 0, "month_cos": 1,
+        "hour_sin": np.sin(2 * np.pi * input_hour / 24),
+        "hour_cos": np.cos(2 * np.pi * input_hour / 24),
+        "day_sin": np.sin(2 * np.pi * day_num / 7),
+        "day_cos": np.cos(2 * np.pi * day_num / 7),
+        "month_sin": np.sin(2 * np.pi * input_month),
+        "month_cos": np.cos(2 * np.pi * input_month),
     }])
 
     prediction = model.predict(input_data)[0]
     probabilities = model.predict_proba(input_data)[0]
     confidence = max(probabilities) * 100
 
-    st.subheader(f"ผลการทำนายซ ระดับความเสี่ยง **{prediction}**")
+    st.subheader(f"ผลการทำนายระดับความเสี่ยง **{prediction}**")
     st.write(f"ความมั่นใจของโมเดล: **{confidence:.1f}%**")
 
     if prediction == "สูง":
