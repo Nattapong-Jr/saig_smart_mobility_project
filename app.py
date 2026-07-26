@@ -5,8 +5,44 @@ from streamlit_folium import st_folium
 from folium.plugins import HeatMap
 import joblib
 import numpy as np
+from google import genai
+import os
+import json
 
 st.set_page_config(page_title="Smart Mobility - จุดเสี่ยงอุบัติเหตุ", layout="wide")
+
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+def search_law(question, top_k=3):
+    result = rag_client.models.embed_content(
+        model="gemini-embedding-001",
+        contents=question
+    )
+    question_embedding = np.array(result.embeddings[0].values)
+    similarities = [cosine_similarity(question_embedding, emb) for emb in law_embeddings]
+    top_indices = np.argsort(similarities)[::-1][:top_k]
+    return [law_chunks[i] for i in top_indices]
+
+def answer_law_question(question):
+    relevant_chunks = search_law(question)
+    context = "\n\n".join([f"[หน้า {c['page']}]\n{c['text']}" for c in relevant_chunks])
+    
+    prompt = f"""คุณเป็นผู้ช่วยตอบคำถามเกี่ยวกับกฎหมายจราจรไทย ใช้ข้อมูลต่อไปนี้ในการตอบคำถาม
+ถ้าข้อมูลไม่พอตอบ ให้บอกตรงๆ ว่าไม่พบข้อมูลที่เกี่ยวข้อง อย่าเดาเอง
+
+ข้อมูลอ้างอิง:
+{context}
+
+คำถาม: {question}
+
+ตอบเป็นภาษาไทย กระชับ เข้าใจง่าย พร้อมระบุว่าอ้างอิงจากหน้าไหน"""
+
+    response = rag_client.models.generate_content(
+        model="gemini-flash-latest",
+        contents=prompt
+    )
+    return response.text, relevant_chunks
 
 st.title("Smart Mobility: แผนที่จุดเสี่ยงอุบัติเหตุ")
 st.write("วิเคราะห์จากข้อมูลอุบัติเหตุจริงทั่วประเทศไทย")
@@ -15,6 +51,14 @@ df = pd.read_csv("data_with_feature.csv")
 
 model = joblib.load("accident_severity_model.pkl")
 label_encoders = joblib.load("label_encoders.pkl")
+
+#RAG
+rag_client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+
+with open("law_chunks.json", "r", encoding="utf-8") as f:
+    law_chunks = json.load(f)
+
+law_embeddings = np.load("law_embeddings.npy")
 
 st.write(f"ข้อมูลทั้งหมด: {len(df):,} เหตุการณ์")
 st.dataframe(df.head())
@@ -111,3 +155,22 @@ if st.button("ทำนายความเสี่ยง", type="primary"):
         st.warning("เงื่อนไขนี้มีความเสี่ยงระดับปานกลาง โปรดขับขี่ด้วยความระมัดระวัง")
     else:
         st.success("เงื่อนไขนี้มีความเสี่ยงค่อนข้างต่ำ แต่ยังต้องขับขี่อย่างระมัดระวังเสมอ")
+
+    st.header("⚖️ ถาม-ตอบกฎหมายจราจร")
+st.write("พิมพ์คำถามเกี่ยวกับกฎหมายจราจรไทย ระบบจะค้นหาและตอบจากคู่มือกฎหมายจริง")
+
+law_question = st.text_input("คำถามของคุณ", placeholder="เช่น ขับรถเร็วเกินกำหนดมีโทษอย่างไร")
+
+if st.button("ค้นหาคำตอบ", type="primary"):
+    if law_question:
+        with st.spinner("กำลังค้นหาข้อมูล..."):
+            answer, sources = answer_law_question(law_question)
+        
+        st.write(answer)
+        
+        with st.expander("ดูเนื้อหาต้นฉบับที่ใช้อ้างอิง"):
+            for chunk in sources:
+                st.write(f"**หน้า {chunk['page']}**")
+                st.text(chunk['text'][:500] + "...")
+    else:
+        st.warning("กรุณาพิมพ์คำถามก่อนค้นหา")
