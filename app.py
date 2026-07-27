@@ -83,7 +83,7 @@ with col3:
     severe_pct = severe_count / len(df) * 100
     st.metric("อุบัติเหตุรุนแรง", f"{severe_count} ครั้ง", f"{severe_pct:.1f}% ของทั้งหมด")
 
-sample_size = st.slider("จำนวนจุดที่แสดงบนแผนที่", 1000, 2000, 5000, step=1000)
+sample_size = st.slider("จำนวนจุดที่แสดงบนแผนที่", 1000, 20000, 5000, step=1000)
 df_sample = df.sample(n=min(sample_size, len(df)), random_state=42)
 
 m = folium.Map(location=[13.7563, 100.5018], zoom_start=6, tiles="CartoDB dark_matter")
@@ -138,25 +138,32 @@ if st.button("ทำนายความเสี่ยง", type="primary"):
         "hour_cos": np.cos(2 * np.pi * input_hour / 24),
         "day_sin": np.sin(2 * np.pi * day_num / 7),
         "day_cos": np.cos(2 * np.pi * day_num / 7),
-        "month_sin": np.sin(2 * np.pi * input_month),
-        "month_cos": np.cos(2 * np.pi * input_month),
+        "month_sin": np.sin(2 * np.pi * input_month / 12),
+        "month_cos": np.cos(2 * np.pi * input_month / 12),
     }])
 
     prediction = model.predict(input_data)[0]
     probabilities = model.predict_proba(input_data)[0]
     confidence = max(probabilities) * 100
 
-    st.subheader(f"ผลการทำนายระดับความเสี่ยง **{prediction}**")
-    st.write(f"ความมั่นใจของโมเดล: **{confidence:.1f}%**")
+    st.session_state["prediction_result"] = {
+        "prediction": prediction,
+        "confidence": confidence
+    }
 
-    if prediction == "สูง":
+if "prediction_result" in st.session_state:
+    result = st.session_state["prediction_result"]
+    st.subheader(f"ผลการทำนายระดับความเสี่ยง **{result['prediction']}**")
+    st.write(f"ความมั่นใจของโมเดล: **{result['confidence']:.1f}%**")
+
+    if result["prediction"] == "สูง":
         st.error("⚠️ เงื่อนไขนี้มีความเสี่ยงสูงที่จะเกิดอุบัติเหตุรุนแรง โปรดขับขี่ด้วยความระมัดระวังเป็นพิเศษ")
-    elif prediction == "กลาง":
+    elif result["prediction"] == "กลาง":
         st.warning("เงื่อนไขนี้มีความเสี่ยงระดับปานกลาง โปรดขับขี่ด้วยความระมัดระวัง")
     else:
         st.success("เงื่อนไขนี้มีความเสี่ยงค่อนข้างต่ำ แต่ยังต้องขับขี่อย่างระมัดระวังเสมอ")
 
-    st.header("⚖️ ถาม-ตอบกฎหมายจราจร")
+st.header("⚖️ ถาม-ตอบกฎหมายจราจร")
 st.write("พิมพ์คำถามเกี่ยวกับกฎหมายจราจรไทย ระบบจะค้นหาและตอบจากคู่มือกฎหมายจริง")
 
 law_question = st.text_input("คำถามของคุณ", placeholder="เช่น ขับรถเร็วเกินกำหนดมีโทษอย่างไร")
